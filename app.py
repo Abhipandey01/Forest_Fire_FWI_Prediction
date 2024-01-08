@@ -1,57 +1,41 @@
-from flask import Flask,request ,render_template , jsonify
+import pickle
+from flask import Flask,request , jsonify, render_template
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 app = Flask(__name__)
 
+# import ridge regressor and Standard Scaler pickle file
+ridge_model=pickle.load(open("models/ridge.pkl",'rb'))
+StandardScaler_model=pickle.load(open("models/scaler.pkl","rb"))
 
-@app.route('/')
-def home_page():
-    return render_template('index.html')
+#Route for Homepage
+@app.route("/")
+def index():
+    return render_template("index.html")
 
+@app.route("/predictdata", methods=['GET','POST'])
+def home():
+        if (request.method=="POST"):
+            Temperature=float(request.form.get("Temperature"))
+            RH=float(request.form.get("Ws"))
+            Ws=float(request.form.get("RH"))
+            Rain =float(request.form.get("Rain"))
+            FFMC=float(request.form.get("FFMC"))
+            DMC=float(request.form.get("DMC"))
+            ISI=float(request.form.get("ISI"))
+            Classes=float(request.form.get("Classes"))
+            region=int(request.form.get("region"))
 
-@app.route('/math',methods=['POST'])
-def math_ops():
-    if(request.method == 'POST'):
-        ops = request.form['operation']
-        num1 = int(request.form['num1'])
-        num2 = int(request.form['num2'])
-        if ops == 'add':
-            r = num1+num2
-            result = "The sum of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-        if ops == 'subtract':
-            r = num1-num2
-            result = "The subtract of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-        if ops == 'multiply':
-            r = num1*num2
-            result = "The multiply of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-        if ops == 'divide':
-            r = num1/num2
-            result = "The divide of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-            
-        return render_template('results.html' , result = result)
+            new_data_scaled= StandardScaler_model.transform([[Temperature,RH,Ws,Rain,FFMC,DMC,ISI,
+            Classes,region]])
+            result=ridge_model.predict(new_data_scaled)
 
+            return render_template("home.html", result=result[0])
 
-
-
-@app.route('/postman_action',methods=['POST'])
-def math_ops1():
-    if(request.method == 'POST'):
-        ops = request.json['operation']
-        num1 = int(request.json['num1'])
-        num2 = int(request.json['num2'])
-        if ops == 'add':
-            r = num1+num2
-            result = "The sum of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-        if ops == 'subtract':
-            r = num1-num2
-            result = "The subtract of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-        if ops == 'multiply':
-            r = num1*num2
-            result = "The multiply of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-        if ops == 'divide':
-            r = num1/num2
-            result = "The divide of " + str(num1) + 'and ' + str(num2) + "is " + str(r)
-            
-        return jsonify(result)
+        else:
+            return render_template("home.html")
 
 if __name__=="__main__":
     app.run(host="0.0.0.0")
